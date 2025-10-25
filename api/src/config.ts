@@ -4,7 +4,7 @@ dotenv.config();
 
 export default {
   port: process.env.PORT ? parseInt(process.env.PORT) : 4000,
-  jwtSecret: process.env.JWT_SECRET,
+  jwtSecret: process.env.JWT_SECRET || 'changeme',
   jwtAccessExp: process.env.JWT_ACCESS_EXP || '15m',
   jwtRefreshTtlDays: process.env.JWT_REFRESH_TTL_DAYS
     ? parseInt(process.env.JWT_REFRESH_TTL_DAYS)
