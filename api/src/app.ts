@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes';
@@ -15,6 +15,6 @@ app.use('/auth', rateLimitMiddleware);
 
 app.use('/auth', authRoutes);
 
-app.get('/', (req, res) => res.json({ ok: true }));
+app.get('/', (req: Request, res: Response) => res.json({ ok: true }));
 
 export default app;
