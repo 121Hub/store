@@ -3,14 +3,26 @@ import axios from 'axios';
 
 type User = { id?: string; email?: string };
 
-const AuthContext = createContext<any>(null);
+type AuthContextType = {
+  user: User | null;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  accessToken: string | null;
+  setAccessToken: (token: string | null) => void;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: any) {
   const auth = useProvideAuth();
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth must be used within AuthProvider');
+  return context;
+};
 
 function useProvideAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -28,16 +40,10 @@ function useProvideAuth() {
         );
         if (res.data?.accessToken) {
           setAccessToken(res.data.accessToken);
-          try {
-            const payload = JSON.parse(
-              atob(res.data.accessToken.split('.')[1])
-            );
-            setUser({ id: payload.sub, email: payload.email || '' });
-          } catch (e) {
-            setUser({});
-          }
+          const payload = JSON.parse(atob(res.data.accessToken.split('.')[1]));
+          setUser({ id: payload.sub, email: payload.email || '' });
         }
-      } catch (err) {
+      } catch {
         // no session
       }
     })();
@@ -53,12 +59,8 @@ function useProvideAuth() {
     );
     if (res.data?.accessToken) {
       setAccessToken(res.data.accessToken);
-      try {
-        const payload = JSON.parse(atob(res.data.accessToken.split('.')[1]));
-        setUser({ id: payload.sub, email: payload.email || '' });
-      } catch (e) {
-        setUser({});
-      }
+      const payload = JSON.parse(atob(res.data.accessToken.split('.')[1]));
+      setUser({ id: payload.sub, email: payload.email || '' });
     } else {
       throw new Error('No access token');
     }
