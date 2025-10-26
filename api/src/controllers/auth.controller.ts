@@ -56,12 +56,8 @@ export async function signup(req: Request, res: Response) {
     .json({ message: 'Signup ok, check your email to confirm.' });
 }
 
-interface ConfirmEmailQuery {
-  token?: string;
-  uid?: string;
-}
 export async function confirmEmail(req: Request, res: Response) {
-  const { token, uid } = req.query as unknown as ConfirmEmailQuery;
+  const { token, uid } = req.query as any;
   if (!token || !uid) return res.status(400).send('Missing');
   const tokenHash = hashToken(token);
   const etok = await prisma.emailToken.findUnique({ where: { tokenHash } });
@@ -235,18 +231,12 @@ export async function oauthRedirect(req: Request, res: Response) {
   return res.redirect(url);
 }
 
-interface OAuthCallbackQuery {
-  code?: string;
-  state?: string;
-  [key: string]: string | undefined;
-}
-
 export async function oauthCallback(req: Request, res: Response) {
   try {
     const provider = req.params.provider;
     const result = await OAuthService.handleCallback(
       provider,
-      req.query as unknown as OAuthCallbackQuery
+      req.query as any
     );
     const user = result.user;
     const accessToken = TokenService.generateAccessToken(user?.id!);

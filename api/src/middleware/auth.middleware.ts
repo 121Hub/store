@@ -16,7 +16,7 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token = auth.replace('Bearer ', '');
   try {
     const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    req.user = payload;
+    (req as any).user = payload;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid token' });
@@ -25,13 +25,10 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 export function requireRole(role: string) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const user = req.user;
-    if (!user) {
-      return res.status(401).json({ error: 'Missing authentication token' });
-    }
-    if (!user.roles || !user.roles.includes(role)) {
+    const user = (req as any).user as JwtPayload | undefined;
+    if (!user) return res.status(401).json({ error: 'Missing' });
+    if (!user.roles || !user.roles.includes(role))
       return res.status(403).json({ error: 'Forbidden' });
-    }
     next();
   };
 }

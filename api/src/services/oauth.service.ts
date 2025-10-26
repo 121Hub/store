@@ -16,16 +16,7 @@ export function getAuthorizationUrl(provider: string, redirectUri: string) {
   return null;
 }
 
-interface OAuthCallbackQuery {
-  code?: string;
-  state?: string;
-  [key: string]: string | undefined;
-}
-
-export async function handleCallback(
-  provider: string,
-  query: OAuthCallbackQuery
-) {
+export async function handleCallback(provider: string, query: any) {
   if (provider === 'google') {
     const code = query.code;
     if (!code) throw new Error('No code');
