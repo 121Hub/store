@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 
-
 const signupSchema = z
   .object({
     name: z
@@ -63,12 +62,18 @@ export function SignupForm({
         password: data.password,
       });
       router.push('/check-email');
-    } catch (error: any) {
-      alert(
-        error.response?.data?.message ||
-          error.message ||
-          'An error occurred during signup.'
-      );
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        alert(
+          error.response?.data?.message ||
+            error.message ||
+            'An error occurred during signup.'
+        );
+      } else if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert('An error occurred during signup.');
+      }
     }
   }
 
