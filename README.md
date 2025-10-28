@@ -58,7 +58,7 @@ Install dependencies for both workspaces:
 ```bash
 # Install API dependencies
 cd api
-pnpm install
+npm install
 
 # Install Web dependencies
 cd ../web
@@ -98,7 +98,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8080
 
 ```bash
 cd api
-pnpm dev
+npm run dev
 ```
 
 API runs on [http://localhost:8080](http://localhost:8080)
@@ -122,19 +122,19 @@ Web app runs on [http://localhost:3000](http://localhost:3000)
 cd api
 
 # Run all tests
-pnpm test
+npm test
 
 # Run tests in watch mode
-pnpm test:watch
+npm run test:watch
 
 # Run with coverage
-pnpm test:coverage
+npm run test:coverage
 
 # Run only unit tests
-pnpm test:unit
+npm run test:unit
 
 # Run only integration tests
-pnpm test:integration
+npm run test:integration
 ```
 
 ### Test Structure
@@ -179,21 +179,22 @@ For complete structure details, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.m
 - This project uses Prisma in the `api` package to manage the database schema, migrations, and to generate the Prisma Client used by the backend.
 - Prisma schema and migration files live in `api/prisma/`.
 
-Quick Prisma commands (run from `api/`):
+Quick Prisma commands (run from `api`):
 
 ```bash
-# install (pnpm example)
+# install (npm)
 cd api
-pnpm add -D prisma
-pnpm add @prisma/client
+npm install
+npm install -D prisma
+npm install @prisma/client
 
 # create migrations and generate client
-pnpm prisma migrate dev --name init
+npx prisma migrate dev --name init
 
 # introspect an existing DB
-pnpm prisma db pull
+npx prisma db pull
 # generate client
-pnpm prisma generate
+npx prisma generate
 ```
 
 If you run into connection errors, verify `api/.env` contains `DATABASE_URL` and check SSL settings required by hosted providers (Supabase, AWS RDS, etc.).
@@ -250,8 +251,8 @@ pnpm format
 
 - **Recommended:** [Railway](https://railway.app/), [Render](https://render.com/), or [Fly.io](https://fly.io/)
 - Set environment variables in your hosting platform
-- Build command: `pnpm build`
-- Start command: `pnpm start`
+- Build command: `npm run build`
+- Start command: `npm start`
 
 ### Frontend (Web)
 
@@ -319,7 +320,7 @@ Pull requests are welcome! Please follow these steps:
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
 3. Make your changes
-4. Run tests: `pnpm test` (in api folder)
+4. Run tests: `npm test` (in api folder)
 5. Lint your code: `pnpm lint` (in web folder)
 6. Commit your changes (`git commit -m 'Add amazing feature'`)
 7. Push to the branch (`git push origin feature/amazing-feature`)
