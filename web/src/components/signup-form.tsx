@@ -4,6 +4,8 @@ import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Controller, useForm } from 'react-hook-form';
 import * as z from 'zod';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +18,7 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+
 
 const signupSchema = z
   .object({
@@ -38,6 +41,7 @@ export function SignupForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
+  const router = useRouter();
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -49,7 +53,23 @@ export function SignupForm({
   });
 
   async function onSubmit(data: z.infer<typeof signupSchema>) {
-    console.log(data);
+    try {
+      const url = `${
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+      }/auth/signup`;
+      await axios.post(url, {
+        name: data.name,
+        email: data.email,
+        password: data.password,
+      });
+      router.push('/check-email');
+    } catch (error: any) {
+      alert(
+        error.response?.data?.message ||
+          error.message ||
+          'An error occurred during signup.'
+      );
+    }
   }
 
   const { isSubmitting } = form.formState;

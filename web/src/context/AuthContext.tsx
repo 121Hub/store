@@ -41,7 +41,7 @@ function useProvideAuth() {
       try {
         const res = await axios.post(
           `${
-            process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8080'
+            process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
           }/auth/refresh`,
           {},
           { withCredentials: true }
@@ -63,7 +63,7 @@ function useProvideAuth() {
   async function login(email: string, password: string) {
     const res = await axios.post(
       `${
-        process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8080'
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       }/auth/login`,
       { email, password },
       { withCredentials: true }
@@ -83,7 +83,7 @@ function useProvideAuth() {
   async function logout() {
     await axios.post(
       `${
-        process.env.NEXT_PUBLIC_AUTH_URL || 'http://localhost:8080'
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       }/auth/logout`,
       {},
       { withCredentials: true }

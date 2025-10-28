@@ -40,7 +40,7 @@ export async function signup(req: Request, res: Response) {
     data: { userId: user.id, tokenHash, type: 'EMAIL_CONFIRM', expiresAt },
   });
 
-  const confirmUrl = `${config.frontendUrl}/auth/confirm-email?token=${rawToken}&uid=${user.id}`;
+  const confirmUrl = `${config.frontendUrl}/confirm-email?token=${rawToken}&uid=${user.id}`;
   await EmailService.sendEmailConfirmation(user.email, confirmUrl);
 
   await prisma.auditLog.create({
@@ -74,7 +74,12 @@ export async function confirmEmail(req: Request, res: Response) {
     data: { userId: uid, event: 'email_confirm' },
   });
 
-  return res.redirect(`${config.frontendUrl}/auth/confirmed`);
+  const isAjax = req.xhr || req.headers.accept?.includes('application/json');
+  if (isAjax) {
+    return res.json({ ok: true, message: 'Email confirmed successfully' });
+  }
+
+  return res.redirect(`${config.frontendUrl}/confirmed`);
 }
 
 export async function login(req: Request, res: Response) {
@@ -192,7 +197,7 @@ export async function forgotPassword(req: Request, res: Response) {
   await prisma.emailToken.create({
     data: { userId: user.id, tokenHash, type: 'PASSWORD_RESET', expiresAt },
   });
-  const resetUrl = `${config.frontendUrl}/auth/reset-password?token=${rawToken}&uid=${user.id}`;
+  const resetUrl = `${config.frontendUrl}/reset-password?token=${rawToken}&uid=${user.id}`;
   await EmailService.sendPasswordReset(user.email, resetUrl);
   await prisma.auditLog.create({
     data: { userId: user.id, event: 'forgot_password' },
@@ -225,7 +230,7 @@ export async function oauthRedirect(req: Request, res: Response) {
   const provider = req.params.provider;
   const url = OAuthService.getAuthorizationUrl(
     provider,
-    `${config.frontendUrl}/auth/callback`
+    `${config.frontendUrl}/callback`
   );
   if (!url) return res.status(400).send('Unknown provider');
   return res.redirect(url);
@@ -256,10 +261,10 @@ export async function oauthCallback(req: Request, res: Response) {
     });
 
     return res.redirect(
-      `${config.frontendUrl}/auth/oauth-success?accessToken=${accessToken}`
+      `${config.frontendUrl}/oauth-success?accessToken=${accessToken}`
     );
   } catch (err) {
     console.error(err);
-    return res.redirect(`${config.frontendUrl}/auth/oauth-error`);
+    return res.redirect(`${config.frontendUrl}/oauth-error`);
   }
 }
