@@ -7,6 +7,7 @@ import { rateLimitMiddleware } from './middleware/rateLimit.middleware';
 import config from './config';
 
 const app = express();
+app.set('trust proxy', true);
 app.use(
   cors({
     origin: config.frontendUrl,
