@@ -7,6 +7,7 @@ import { rateLimitMiddleware } from './middleware/rateLimit.middleware';
 import config from './config';
 
 const app = express();
+app.set('trust proxy', 1); // Trust first proxy
 app.use(
   cors({
     origin: config.frontendUrl,
@@ -19,7 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Basic rate limits
-app.use('/auth', rateLimitMiddleware);
+//app.use('/auth', rateLimitMiddleware);
 
 app.use('/auth', authRoutes);
 
