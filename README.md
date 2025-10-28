@@ -22,7 +22,8 @@ For detailed folder structure, see [PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md
 
 - **Framework:** [Express.js](https://expressjs.com/)
 - **Language:** [TypeScript](https://www.typescriptlang.org/)
-- **Database & Auth:** [Supabase](https://supabase.com/)
+- **Database:** PostgreSQL (accessed via [Prisma](https://www.prisma.io/))
+- **Auth:** Application-managed JWT + refresh tokens (see `api/src`)
 - **Testing:** [Jest](https://jestjs.io/) + [Supertest](https://github.com/ladjs/supertest)
 - **Architecture:** Feature-based modular structure
 
@@ -70,13 +71,18 @@ pnpm install
 
 ```env
 PORT=8080
-SUPABASE_URL=<your-supabase-url>
-SUPABASE_ANON_KEY=<your-supabase-anon-key>
-SUPABASE_SERVICE_KEY=<your-supabase-service-key>
+DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DBNAME
+JWT_SECRET=<a-long-random-secret>
+COOKIE_DOMAIN=localhost
+FRONTEND_URL=http://localhost:3000
 NODE_ENV=development
 ```
 
-You can find these in your [Supabase project dashboard](https://app.supabase.com/).
+Notes:
+
+- `DATABASE_URL` is required for Prisma to connect to your Postgres database (it may point to a Supabase Postgres instance if you use Supabase as your provider).
+- `JWT_SECRET` should be a long, randomly generated secret used to sign access tokens.
+- Do NOT commit secrets. Use `.env.example` to document variables and keep secrets out of version control.
 
 **For the Web (`web/.env.local`):**
 
