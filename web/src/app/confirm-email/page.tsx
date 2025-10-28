@@ -1,13 +1,21 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import axios from 'axios';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Loader2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function ConfirmEmailPage() {
+  return (
+    <Suspense>
+      <ConfirmEmailContent />
+    </Suspense>
+  );
+}
+
+function ConfirmEmailContent() {
   const sp = useSearchParams();
   const router = useRouter();
   const [status, setStatus] = useState<'loading' | 'error' | 'invalid'>(
