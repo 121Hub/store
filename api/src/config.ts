@@ -16,6 +16,8 @@ export default {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  sendGridApiKey: process.env.SENDGRID_API_KEY,
+  senderEmail: process.env.SENDER,
   cookie: {
     domain: process.env.COOKIE_DOMAIN || 'localhost',
     secure: process.env.NODE_ENV === 'production',

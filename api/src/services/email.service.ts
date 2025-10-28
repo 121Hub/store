@@ -1,11 +1,7 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import config from '../config';
 
-const transporter = nodemailer.createTransport({
-  host: config.smtp.host,
-  port: config.smtp.port,
-  auth: { user: config.smtp.user, pass: config.smtp.pass },
-});
+sgMail.setApiKey(config.sendGridApiKey || '');
 
 export async function sendEmailConfirmation(to: string, confirmUrl: string) {
   const html = `
@@ -65,13 +61,22 @@ The Fynflo Team
 support@fynflo.com
 `;
 
-  await transporter.sendMail({
-    from: `"Fynflo Team" <${config.smtp.user}>`,
+  const msg = {
     to,
+    from: { email: config?.senderEmail!, name: 'Fynflo Team' }, // Change to your verified sender
     subject: 'Confirm your Fynflo account',
-    html,
     text,
-  });
+    html,
+  };
+
+  try {
+    const response = await sgMail.send(msg);
+    console.log('Email sent:', response[0].statusCode);
+    return response;
+  } catch (error) {
+    console.error('SendGrid error:', error);
+    throw error;
+  }
 }
 
 // Remember to add a logo to the email.
@@ -133,11 +138,20 @@ The Fynflo Team
 support@fynflo.com
 `;
 
-  await transporter.sendMail({
-    from: `"Fynflo Team" <${config.smtp.user}>`,
+  const msg = {
     to,
+    from: { email: config?.senderEmail!, name: 'Fynflo Team' }, // Change to your verified sender
     subject: 'Reset your Fynflo password',
-    html,
     text,
-  });
+    html,
+  };
+
+  try {
+    const response = await sgMail.send(msg);
+    console.log('Email sent:', response[0].statusCode);
+    return response;
+  } catch (error) {
+    console.error('SendGrid error:', error);
+    throw error;
+  }
 }
