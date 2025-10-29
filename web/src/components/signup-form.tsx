@@ -64,20 +64,33 @@ export function SignupForm({
       router.push('/check-email');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        alert(
+        const message =
+          error.response?.data?.error ||
           error.response?.data?.message ||
-            error.message ||
-            'An error occurred during signup.'
-        );
+          error.message ||
+          'An error occurred during signup.';
+
+        if (message.toLowerCase().includes('email')) {
+          form.setError('email', { message });
+        } else if (message.toLowerCase().includes('name')) {
+          form.setError('name', { message });
+        } else if (message.toLowerCase().includes('password')) {
+          form.setError('password', { message });
+        } else {
+          // Fallback for any other server error
+          form.setError('root', { message });
+        }
       } else if (error instanceof Error) {
-        alert(error.message);
+        form.setError('root', { message: error.message });
       } else {
-        alert('An error occurred during signup.');
+        form.setError('root', {
+          message: 'An unexpected error occurred during signup.',
+        });
       }
     }
   }
 
-  const { isSubmitting } = form.formState;
+  const { isSubmitting, errors } = form.formState;
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
@@ -195,7 +208,7 @@ export function SignupForm({
                   Must be at least 8 characters long.
                 </FieldDescription>
               </Field>
-
+              {errors.root && <FieldError errors={[errors.root]} />}
               <Field>
                 <Button
                   type="submit"
