@@ -1,24 +1,76 @@
+'use client';
+
+import * as React from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
+import * as z from 'zod';
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 
+const loginSchema = z.object({
+  email: z.email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
 export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<'div'>) {
+  const router = useRouter();
+  const form = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
+  });
+
+  async function onSubmit(data: z.infer<typeof loginSchema>) {
+    try {
+      const url = `${
+        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
+      }/auth/login`;
+      await axios.post(url, { email: data.email, password: data.password });
+      router.push('/dashboard');
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
+          'Login failed. Please try again.';
+        form.setError('root', { message });
+      } else if (error instanceof Error) {
+        form.setError('root', { message: error.message });
+      } else {
+        form.setError('root', { message: 'An unknown error occurred.' });
+      }
+    }
+  }
+
+  const { isSubmitting, errors } = form.formState;
+
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
       <Card className="overflow-hidden p-0">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8">
+          <form
+            id="login-form"
+            className="p-6 md:p-8"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
             <FieldGroup>
               <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="text-2xl font-bold">Welcome back</h1>
@@ -26,7 +78,30 @@ export function LoginForm({
                   Login to your account
                 </p>
               </div>
-              <Field>
+
+              {/* Email Field */}
+              <Controller
+                name="email"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="email">Email</FieldLabel>
+                    <Input
+                      {...field}
+                      id="email"
+                      type="email"
+                      aria-invalid={fieldState.invalid}
+                      placeholder="m@example.com"
+                      autoComplete="email"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              {/* <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
@@ -34,8 +109,38 @@ export function LoginForm({
                   placeholder="m@example.com"
                   required
                 />
-              </Field>
-              <Field>
+              </Field> */}
+
+              {/* Password Field */}
+              <Controller
+                name="password"
+                control={form.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <div className="flex items-center">
+                      <FieldLabel htmlFor="password">Password</FieldLabel>
+                      <a
+                        href="#"
+                        className="ml-auto text-sm underline-offset-2 hover:underline"
+                      >
+                        Forgot your password?
+                      </a>
+                    </div>
+                    <Input
+                      {...field}
+                      id="password"
+                      type="password"
+                      aria-invalid={fieldState.invalid}
+                      autoComplete="new-password"
+                    />
+                    {fieldState.invalid && (
+                      <FieldError errors={[fieldState.error]} />
+                    )}
+                  </Field>
+                )}
+              />
+
+              {/* <Field>
                 <div className="flex items-center">
                   <FieldLabel htmlFor="password">Password</FieldLabel>
                   <a
@@ -46,9 +151,12 @@ export function LoginForm({
                   </a>
                 </div>
                 <Input id="password" type="password" required />
-              </Field>
+              </Field> */}
+              {errors.root && <FieldError errors={[errors.root]} />}
               <Field>
-                <Button type="submit">Login</Button>
+                <Button type="submit" form="login-form" disabled={isSubmitting}>
+                  {isSubmitting ? 'Logging in...' : 'Login'}
+                </Button>
               </Field>
               <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
                 Or continue with
