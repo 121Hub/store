@@ -1,34 +1,15 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import config from '../config';
-
-export interface JwtPayload {
-  sub: string;
-  tid?: string;
-  roles?: string[];
-  iat?: number;
-  exp?: number;
-}
+import { verifyAccessToken } from '../services/token.service';
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const auth = req.headers.authorization;
-  if (!auth) return res.status(401).json({ error: 'Missing token' });
-  const token = auth.replace('Bearer ', '');
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Missing token' });
   try {
-    const payload = jwt.verify(token, config.jwtSecret) as JwtPayload;
-    (req as any).user = payload;
+    const claims = verifyAccessToken(token);
+    req.user = claims;
     next();
-  } catch (err) {
+  } catch (e: unknown) {
     return res.status(401).json({ error: 'Invalid token' });
   }
-}
-
-export function requireRole(role: string) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user as JwtPayload | undefined;
-    if (!user) return res.status(401).json({ error: 'Missing' });
-    if (!user.roles || !user.roles.includes(role))
-      return res.status(403).json({ error: 'Forbidden' });
-    next();
-  };
 }

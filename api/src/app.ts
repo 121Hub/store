@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes';
+import tenantsRoutes from './routes/tenants.routes';
 import { rateLimitMiddleware } from './middleware/rateLimit.middleware';
 import config from './config';
 
@@ -23,6 +24,7 @@ app.use(cookieParser());
 //app.use('/auth', rateLimitMiddleware);
 
 app.use('/auth', authRoutes);
+app.use('/tenants', tenantsRoutes);
 
 app.get('/', (req: Request, res: Response) => res.json({ ok: true }));
 
