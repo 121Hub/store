@@ -10,8 +10,7 @@ router.post('/logout', AuthController.logout);
 router.get('/confirm-email', AuthController.confirmEmail);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/reset-password', AuthController.resetPassword);
-
-// OAuth flow endpoints
+router.get('/me', AuthController.me);
 router.get('/oauth/:provider', AuthController.oauthRedirect);
 router.get('/oauth/:provider/callback', AuthController.oauthCallback);
 
