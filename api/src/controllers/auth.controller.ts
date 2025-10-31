@@ -3,14 +3,20 @@ import { prisma } from '../prismaClient';
 import argon2 from 'argon2';
 import crypto from 'crypto';
 import config from '../config';
+import slugify from 'slugify';
+import { Role } from '@prisma/client';
 import * as EmailService from '../services/email.service';
 import * as TokenService from '../services/token.service';
 import * as OAuthService from '../services/oauth.service';
+import { generateUniqueTenantSlug } from '../utils/slugify';
 
-function hashToken(raw: string) {
-  return crypto.createHash('sha256').update(raw).digest('hex');
-}
+// Controller functions
+// ------------------------------------------------------------------
+// Signup, Confirm Email, Login, Refresh Token, Logout,
+// Forgot Password, Reset Password, OAuth Redirect, OAuth Callback
+// ------------------------------------------------------------------
 
+// Signup
 export async function signup(req: Request, res: Response) {
   const { email, password, name, tenantSlug } = req.body;
   if (!email || !password)
@@ -24,17 +30,25 @@ export async function signup(req: Request, res: Response) {
     data: { email, passwordHash, name },
   });
 
-  if (tenantSlug) {
-    const tenant = await prisma.tenant.create({
-      data: { name: tenantSlug, slug: tenantSlug },
-    });
-    await prisma.userTenant.create({
-      data: { userId: user.id, tenantId: tenant.id, role: 'TENANT_ADMIN' },
-    });
-  }
+  const base =
+    tenantSlug ||
+    (name
+      ? slugify(name, { lower: true, strict: true })
+      : slugify(email.split('@')[0], { lower: true, strict: true }));
+  const uniqueSlug = await generateUniqueTenantSlug(base);
+
+  const tenant = await prisma.tenant.create({
+    data: { name: name || email, slug: uniqueSlug },
+  });
+  await prisma.userTenant.create({
+    data: { userId: user.id, tenantId: tenant.id, role: Role.TENANT_ADMIN },
+  });
+  await prisma.roleAssignment.create({
+    data: { userId: user.id, role: Role.TENANT_ADMIN, scope: tenant.id },
+  });
 
   const rawToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = hashToken(rawToken);
+  const tokenHash = TokenService.hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
   await prisma.emailToken.create({
     data: { userId: user.id, tokenHash, type: 'EMAIL_CONFIRM', expiresAt },
@@ -47,19 +61,21 @@ export async function signup(req: Request, res: Response) {
     data: {
       userId: user.id,
       event: 'signup',
-      meta: { tenantSlug: tenantSlug || null },
+      meta: { tenantSlug: uniqueSlug },
     },
   });
 
-  return res
-    .status(201)
-    .json({ message: 'Signup ok, check your email to confirm.' });
+  return res.status(201).json({
+    message: 'Signup ok, check your email to confirm.',
+    tenantSlug: uniqueSlug,
+  });
 }
 
+// Confirm Email
 export async function confirmEmail(req: Request, res: Response) {
   const { token, uid } = req.query as any;
   if (!token || !uid) return res.status(400).send('Missing');
-  const tokenHash = hashToken(token);
+  const tokenHash = TokenService.hashToken(token);
   const etok = await prisma.emailToken.findUnique({ where: { tokenHash } });
   if (!etok || etok.userId !== uid)
     return res.status(400).send('Invalid token');
@@ -75,19 +91,22 @@ export async function confirmEmail(req: Request, res: Response) {
   });
 
   const isAjax = req.xhr || req.headers.accept?.includes('application/json');
-  if (isAjax) {
+  if (isAjax)
     return res.json({ ok: true, message: 'Email confirmed successfully' });
-  }
 
   return res.redirect(`${config.frontendUrl}/confirmed`);
 }
 
+// Login
 export async function login(req: Request, res: Response) {
   const { email, password } = req.body;
   if (!email || !password)
     return res.status(400).json({ error: 'email and password required' });
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: { tenants: true, roleAssignments: true },
+  });
   if (!user || !user.passwordHash)
     return res.status(401).json({ error: 'Invalid credentials' });
 
@@ -97,7 +116,19 @@ export async function login(req: Request, res: Response) {
   if (!user.emailVerified)
     return res.status(403).json({ error: 'Email not verified' });
 
-  const accessToken = TokenService.generateAccessToken(user.id);
+  const tenants = user.tenants.map((t) => ({
+    tenantId: t.tenantId,
+    role: t.role,
+  }));
+  const platformRoles = user.roleAssignments
+    .filter((r) => r.scope === 'platform')
+    .map((r) => r.role);
+
+  const accessToken = TokenService.generateAccessToken(
+    user.id,
+    platformRoles,
+    tenants
+  );
   const rawRefresh = TokenService.generateRefreshTokenRaw();
   await TokenService.storeRefreshToken(
     user.id,
@@ -121,10 +152,11 @@ export async function login(req: Request, res: Response) {
   return res.json({ accessToken });
 }
 
+// Refresh
 export async function refresh(req: Request, res: Response) {
   const raw = req.cookies['refresh_token'] || req.body.refreshToken;
   if (!raw) return res.status(401).json({ error: 'No refresh token' });
-  const tokenHash = hashToken(raw);
+  const tokenHash = TokenService.hashToken(raw);
   const tokenRow = await prisma.refreshToken.findUnique({
     where: { tokenHash },
   });
@@ -136,20 +168,33 @@ export async function refresh(req: Request, res: Response) {
     return res.status(401).json({ error: 'Expired or revoked' });
   }
 
-  const newRaw = TokenService.generateRefreshTokenRaw();
-  const newToken = await TokenService.storeRefreshToken(
+  const user = await prisma.user.findUnique({
+    where: { id: tokenRow.userId },
+    include: { tenants: true, roleAssignments: true },
+  });
+
+  if (!user) return res.status(401).json({ error: 'Invalid user' });
+
+  const { newRaw } = await TokenService.rotateRefreshToken(
+    tokenHash,
     tokenRow.userId,
-    newRaw,
     req.ip || undefined,
     req.get('User-Agent') || undefined
   );
 
-  await prisma.refreshToken.update({
-    where: { id: tokenRow.id },
-    data: { revoked: true, replacedById: newToken.id, lastUsedAt: new Date() },
-  });
+  const tenants = user.tenants.map((t) => ({
+    tenantId: t.tenantId,
+    role: t.role,
+  }));
+  const platformRoles = user.roleAssignments
+    .filter((r) => r.scope === 'platform')
+    .map((r) => r.role);
 
-  const accessToken = TokenService.generateAccessToken(tokenRow.userId);
+  const accessToken = TokenService.generateAccessToken(
+    user.id,
+    platformRoles,
+    tenants
+  );
 
   res.cookie('refresh_token', newRaw, {
     httpOnly: true,
@@ -165,13 +210,14 @@ export async function refresh(req: Request, res: Response) {
   return res.json({ accessToken });
 }
 
+// Logout
 export async function logout(req: Request, res: Response) {
   const raw = req.cookies['refresh_token'] || req.body.refreshToken;
   if (!raw) {
     res.clearCookie('refresh_token', { domain: config.cookie.domain });
     return res.json({ ok: true });
   }
-  const tokenHash = hashToken(raw);
+  const tokenHash = TokenService.hashToken(raw);
   const tokenRow = await prisma.refreshToken.findUnique({
     where: { tokenHash },
   });
@@ -185,6 +231,7 @@ export async function logout(req: Request, res: Response) {
   return res.json({ ok: true });
 }
 
+// Forgot Password
 export async function forgotPassword(req: Request, res: Response) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'email required' });
@@ -192,7 +239,7 @@ export async function forgotPassword(req: Request, res: Response) {
   if (!user) return res.json({ ok: true });
 
   const rawToken = crypto.randomBytes(32).toString('hex');
-  const tokenHash = hashToken(rawToken);
+  const tokenHash = TokenService.hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 1000 * 60 * 60);
   await prisma.emailToken.create({
     data: { userId: user.id, tokenHash, type: 'PASSWORD_RESET', expiresAt },
@@ -205,11 +252,12 @@ export async function forgotPassword(req: Request, res: Response) {
   return res.json({ ok: true });
 }
 
+// Reset Password
 export async function resetPassword(req: Request, res: Response) {
   const { token, uid, newPassword } = req.body;
   if (!token || !uid || !newPassword)
     return res.status(400).json({ error: 'invalid' });
-  const tokenHash = hashToken(token);
+  const tokenHash = TokenService.hashToken(token);
   const etok = await prisma.emailToken.findUnique({ where: { tokenHash } });
   if (!etok || etok.userId !== uid)
     return res.status(400).json({ error: 'Invalid token' });
@@ -226,6 +274,7 @@ export async function resetPassword(req: Request, res: Response) {
   return res.json({ ok: true });
 }
 
+// OAuth Redirect
 export async function oauthRedirect(req: Request, res: Response) {
   const provider = req.params.provider;
   const url = OAuthService.getAuthorizationUrl(
@@ -236,6 +285,7 @@ export async function oauthRedirect(req: Request, res: Response) {
   return res.redirect(url);
 }
 
+// OAuth Callback
 export async function oauthCallback(req: Request, res: Response) {
   try {
     const provider = req.params.provider;
@@ -243,11 +293,53 @@ export async function oauthCallback(req: Request, res: Response) {
       provider,
       req.query as any
     );
-    const user = result.user;
-    const accessToken = TokenService.generateAccessToken(user?.id!);
+    const userId = result?.user?.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { tenants: true },
+    });
+    if (user && user.tenants.length === 0) {
+      const base = slugify(user.name || user.email.split('@')[0], {
+        lower: true,
+        strict: true,
+      });
+      let unique = base;
+      let i = 1;
+      while (await prisma.tenant.findUnique({ where: { slug: unique } }))
+        unique = `${base}-${i++}`;
+      const tenant = await prisma.tenant.create({
+        data: { name: user.name || user.email, slug: unique },
+      });
+      await prisma.userTenant.create({
+        data: { userId: user.id, tenantId: tenant.id, role: Role.TENANT_ADMIN },
+      });
+      await prisma.roleAssignment.create({
+        data: { userId: user.id, role: Role.TENANT_ADMIN, scope: tenant.id },
+      });
+    }
+
+    const full = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { tenants: true, roleAssignments: true },
+    });
+
+    const tenants =
+      full?.tenants.map((t) => ({ tenantId: t.tenantId, role: t.role })) || [];
+    const platformRoles =
+      full?.roleAssignments
+        .filter((r) => r.scope === 'platform')
+        .map((r) => r.role) || [];
+
+    const accessToken = TokenService.generateAccessToken(
+      userId!,
+      platformRoles,
+      tenants
+    );
+
     const rawRefresh = TokenService.generateRefreshTokenRaw();
     await TokenService.storeRefreshToken(
-      user?.id!,
+      userId!,
       rawRefresh,
       req.ip || undefined,
       req.get('User-Agent') || undefined
@@ -267,4 +359,29 @@ export async function oauthCallback(req: Request, res: Response) {
     console.error(err);
     return res.redirect(`${config.frontendUrl}/oauth-error`);
   }
+}
+
+// Me
+export async function me(req: Request, res: Response) {
+  const user = req.user;
+  if (!user) return res.status(401).json({ error: 'Unauthorized' });
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.sub },
+    include: { tenants: true, roleAssignments: true },
+  });
+  if (!dbUser) return res.status(404).json({ error: 'Not found' });
+  const tenants = dbUser.tenants.map((t) => ({
+    tenantId: t.tenantId,
+    role: t.role,
+  }));
+  const platformRoles = dbUser.roleAssignments
+    .filter((r) => r.scope === 'platform')
+    .map((r) => r.role);
+
+  return res.json({
+    id: dbUser.id,
+    email: dbUser.email,
+    tenants,
+    platformRoles,
+  });
 }
