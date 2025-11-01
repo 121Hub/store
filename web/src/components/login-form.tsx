@@ -18,6 +18,7 @@ import {
   FieldSeparator,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useAuth } from '@/context/AuthContext';
 
 const loginSchema = z.object({
   email: z.email('Invalid email address'),
@@ -29,6 +30,7 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<'div'>) {
   const router = useRouter();
+  const { login } = useAuth();
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -39,10 +41,7 @@ export function LoginForm({
 
   async function onSubmit(data: z.infer<typeof loginSchema>) {
     try {
-      const url = `${
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-      }/auth/login`;
-      await axios.post(url, { email: data.email, password: data.password });
+      await login(data.email, data.password);
       router.push('/dashboard');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
