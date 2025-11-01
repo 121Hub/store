@@ -15,12 +15,6 @@ export default {
     ? parseInt(process.env.JWT_ACCESS_TTL_SEC)
     : 900,
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
-  smtp: {
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587,
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
   sendGridApiKey: process.env.SENDGRID_API_KEY,
   senderEmail: process.env.SENDER,
   cookie: {
