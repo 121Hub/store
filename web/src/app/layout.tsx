@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'NovaCreate — Build and Manage Your Online Business Effortlessly',
+  title: 'FynFloo — Build, Launch, and Grow Your Online Business with Ease',
   description:
-    'NovaCreate is an AI-powered no-code platform designed to help small and medium-sized businesses launch, manage, and scale their digital presence easily. Create websites, manage products, and accept payments — all without writing a single line of code.',
+    'FynFloo is an AI-powered no-code platform that empowers entrepreneurs and small businesses to create stunning websites, manage products, and handle payments — all without technical skills. Build and scale your digital presence effortlessly with FynFloo.',
 };
 
 export default function RootLayout({
