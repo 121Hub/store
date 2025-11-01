@@ -16,7 +16,7 @@ export default function Home() {
         </div>
       ) : (
         <div>
-          <Link href="/signin">Sign In</Link> |{' '}
+          <Link href="/login">Sign In</Link> |{' '}
           <Link href="/signup">Sign Up</Link>
         </div>
       )}

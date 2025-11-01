@@ -56,11 +56,15 @@ export function SignupForm({
       const url = `${
         process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
       }/auth/signup`;
-      await axios.post(url, {
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      });
+      await axios.post(
+        url,
+        {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        },
+        { withCredentials: true }
+      );
       router.push('/check-email');
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
