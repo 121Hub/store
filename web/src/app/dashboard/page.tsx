@@ -12,8 +12,6 @@ export default function DashboardPage() {
 }
 
 function DashboardInner() {
-  const { accessToken, tenants, currentTenant } = useAuth();
-  return (
-    <h2>Current Tenant: {currentTenant?.tenantId || tenants?.[0]?.tenantId}</h2>
-  );
+  const { user } = useAuth();
+  return <h2>User email: {user?.email}</h2>;
 }

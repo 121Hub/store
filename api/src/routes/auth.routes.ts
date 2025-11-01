@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as AuthController from '../controllers/auth.controller';
+import { requireAuth } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -10,7 +11,7 @@ router.post('/logout', AuthController.logout);
 router.get('/confirm-email', AuthController.confirmEmail);
 router.post('/forgot-password', AuthController.forgotPassword);
 router.post('/reset-password', AuthController.resetPassword);
-router.get('/me', AuthController.me);
+router.get('/me', requireAuth, AuthController.me);
 router.get('/oauth/:provider', AuthController.oauthRedirect);
 router.get('/oauth/:provider/callback', AuthController.oauthCallback);
 
