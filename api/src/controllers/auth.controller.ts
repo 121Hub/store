@@ -130,6 +130,7 @@ export async function login(req: Request, res: Response) {
     tenants
   );
   const rawRefresh = TokenService.generateRefreshTokenRaw();
+
   await TokenService.storeRefreshToken(
     user.id,
     rawRefresh,
@@ -137,6 +138,16 @@ export async function login(req: Request, res: Response) {
     req.get('User-Agent') || undefined
   );
 
+  // Set access_token cookie (short-lived)
+  res.cookie('access_token', accessToken, {
+    httpOnly: true,
+    secure: config.cookie.secure,
+    sameSite: 'lax',
+    domain: config.cookie.domain,
+    maxAge: config.jwtAccessTtlSec * 1000,
+  });
+
+  // Set refresh_token cookie (long-lived)
   res.cookie('refresh_token', rawRefresh, {
     httpOnly: true,
     secure: config.cookie.secure,
@@ -149,12 +160,12 @@ export async function login(req: Request, res: Response) {
     data: { userId: user.id, event: 'login', meta: { ip: req.ip } },
   });
 
-  return res.json({ accessToken });
+  return res.json({ ok: true });
 }
 
 // Refresh
 export async function refresh(req: Request, res: Response) {
-  const raw = req.cookies['refresh_token'] || req.body.refreshToken;
+  const raw = req.cookies['refresh_token'];
   if (!raw) return res.status(401).json({ error: 'No refresh token' });
   const tokenHash = TokenService.hashToken(raw);
   const tokenRow = await prisma.refreshToken.findUnique({
@@ -196,6 +207,16 @@ export async function refresh(req: Request, res: Response) {
     tenants
   );
 
+  // Set new access_token cookie
+  res.cookie('access_token', accessToken, {
+    httpOnly: true,
+    secure: config.cookie.secure,
+    sameSite: 'lax',
+    domain: config.cookie.domain,
+    maxAge: config.jwtAccessTtlSec * 1000,
+  });
+
+  // Set new refresh_token cookie
   res.cookie('refresh_token', newRaw, {
     httpOnly: true,
     secure: config.cookie.secure,
@@ -207,7 +228,7 @@ export async function refresh(req: Request, res: Response) {
   await prisma.auditLog.create({
     data: { userId: tokenRow.userId, event: 'refresh' },
   });
-  return res.json({ accessToken });
+  return res.json({ ok: true });
 }
 
 // Logout
@@ -227,7 +248,9 @@ export async function logout(req: Request, res: Response) {
       data: { revoked: true },
     });
 
+  res.clearCookie('access_token', { domain: config.cookie.domain });
   res.clearCookie('refresh_token', { domain: config.cookie.domain });
+
   return res.json({ ok: true });
 }
 

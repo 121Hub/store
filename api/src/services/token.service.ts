@@ -4,7 +4,7 @@ import { prisma } from '../prismaClient';
 import config from '../config';
 import { Role } from '@prisma/client';
 
-type AccessClaims = {
+export type AccessClaims = {
   sub: string;
   typ: 'access';
   iat: number;

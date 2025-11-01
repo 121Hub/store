@@ -1,10 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
+import { axiosClient } from '../lib/axiosClient';
 import { User } from '../types/user';
 import { AuthContextValue } from '../types/authcontext';
-import { Tenant } from '@/types/tenant';
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
@@ -23,117 +22,43 @@ export const useAuth = () => {
   return ctx;
 };
 
-function decode(token: string | null) {
-  if (!token) return null;
-  try {
-    return JSON.parse(atob(token.split('.')[1]));
-  } catch {
-    return null;
-  }
-}
-
 function useProvideAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [accessToken, setAccessTokenState] = useState<string | null>(null);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
-  const [platformRoles, setPlatformRoles] = useState<string[]>([]);
-  const [currentTenantId, setCurrentTenantId] = useState<string | null>(null);
 
+  /**
+   * On load, call /auth/me to get user info.
+   * Access token is sent automatically via cookie.
+   */
   useEffect(() => {
-    // try silent refresh on load
     (async () => {
       try {
-        const res = await axios.post(
-          `${
-            process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-          }/auth/refresh`,
-          {},
-          { withCredentials: true }
-        );
-        const token = res.data?.accessToken;
-        if (token) {
-          setAccessTokenState(token);
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          const payload = decode(token);
-          setUser({ id: payload?.sub, email: payload?.email });
-          setTenants(payload?.tenants || []);
-          setPlatformRoles(payload?.roles || []);
-          setCurrentTenantId((payload?.tenants || [])[0]?.tenantId || null);
-        }
+        const res = await axiosClient.get('/auth/me'); // sends access_token cookie
+        setUser(res.data);
+        console.log(user);
       } catch (err) {
-        // no session
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, []);
 
   async function login(email: string, password: string) {
-    const res = await axios.post(
-      `${
-        process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-      }/auth/login`,
-      { email, password },
-      { withCredentials: true }
-    );
-    const token = res.data?.accessToken;
-    if (!token) throw new Error('No token');
-    setAccessTokenState(token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    const payload = decode(token);
-    setUser({ id: payload?.sub, email: payload?.email });
-    setTenants(payload?.tenants || []);
-    setPlatformRoles(payload?.roles || []);
-    setCurrentTenantId((payload?.tenants || [])[0]?.tenantId || null);
+    await axiosClient.post('/auth/login', { email, password });
+    const res = await axiosClient.get('/auth/me');
+    setUser(res.data);
   }
 
   async function logout() {
-    try {
-      await axios.post(
-        `${
-          process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'
-        }/auth/logout`,
-        {},
-        { withCredentials: true }
-      );
-    } catch {}
+    await axiosClient.post('/auth/logout');
     setUser(null);
-    setAccessTokenState(null);
-    setTenants([]);
-    setPlatformRoles([]);
-    setCurrentTenantId(null);
-    delete axios.defaults.headers.common['Authorization'];
   }
-
-  function setAccessToken(token: string) {
-    setAccessTokenState(token);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    const payload = decode(token);
-    setUser({ id: payload?.sub, email: payload?.email });
-    setTenants(payload?.tenants || []);
-    setPlatformRoles(payload?.roles || []);
-    setCurrentTenantId((payload?.tenants || [])[0]?.tenantId || null);
-  }
-
-  function switchTenant(tenantId: string) {
-    const t = tenants.find((x) => x.tenantId === tenantId) || null;
-    setCurrentTenantId(t?.tenantId || null);
-    if (t) localStorage.setItem('fynflo.currentTenant', t.tenantId);
-  }
-
-  const currentTenant =
-    tenants.find((x) => x.tenantId === currentTenantId) || tenants[0] || null;
 
   return {
     user,
     loading,
-    accessToken,
-    tenants,
-    platformRoles,
-    currentTenant,
     login,
     logout,
-    setAccessToken,
-    switchTenant,
   };
 }
