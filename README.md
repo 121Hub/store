@@ -1,4 +1,4 @@
-# 121Hub Store
+# Fynfloo
 
 A modern SaaS platform for building and managing online stores with a visual editor, AI-enhanced design, and seamless e-commerce integration.  
 Built with **Next.js**, **Express**, **Supabase**, **TailwindCSS**, **Radix UI**, **Shadcn UI**, and **Zustand** — designed for scalability and developer happiness.
