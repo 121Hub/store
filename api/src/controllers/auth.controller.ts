@@ -143,6 +143,7 @@ export async function login(req: Request, res: Response) {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: 'lax',
+    path: '/',
     domain: config.cookie.domain,
     maxAge: config.jwtAccessTtlSec * 1000,
   });
@@ -152,6 +153,7 @@ export async function login(req: Request, res: Response) {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: 'lax',
+    path: '/',
     domain: config.cookie.domain,
     maxAge: config.jwtRefreshTtlDays * 24 * 60 * 60 * 1000,
   });
@@ -212,6 +214,7 @@ export async function refresh(req: Request, res: Response) {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: 'lax',
+    path: '/',
     domain: config.cookie.domain,
     maxAge: config.jwtAccessTtlSec * 1000,
   });
@@ -221,6 +224,7 @@ export async function refresh(req: Request, res: Response) {
     httpOnly: true,
     secure: config.cookie.secure,
     sameSite: 'lax',
+    path: '/',
     domain: config.cookie.domain,
     maxAge: config.jwtRefreshTtlDays * 24 * 60 * 60 * 1000,
   });
