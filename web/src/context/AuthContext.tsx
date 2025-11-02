@@ -33,11 +33,17 @@ function useProvideAuth() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await axiosClient.get('/auth/me'); // sends access_token cookie
+        const res = await axiosClient.get('/auth/me');
         setUser(res.data);
-        console.log(user);
-      } catch (err) {
-        setUser(null);
+      } catch {
+        try {
+          // Try refreshing once
+          await axiosClient.post('/auth/refresh');
+          const res = await axiosClient.get('/auth/me');
+          setUser(res.data);
+        } catch {
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
