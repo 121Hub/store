@@ -7,16 +7,6 @@ export async function middleware(req: NextRequest) {
   const token = req.cookies.get('access_token')?.value;
   const { pathname } = req.nextUrl;
 
-  if (!PROTECTED_PATHS.some((path) => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
-  if (!token) {
-    const loginUrl = new URL('/login', req.url);
-    loginUrl.searchParams.set('from', pathname);
-    return NextResponse.redirect(loginUrl);
-  }
-
   const isAuthPage =
     pathname.startsWith('/login') ||
     pathname.startsWith('/signup') ||
@@ -29,6 +19,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(dashboardUrl);
   }
 
+  // Protected pages only
+  if (PROTECTED_PATHS.some((path) => pathname.startsWith(path))) {
+    if (!token) {
+      const loginUrl = new URL('/login', req.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Allow the request to proceed
   return NextResponse.next();
 }
 
