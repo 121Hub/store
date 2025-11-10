@@ -1,13 +1,18 @@
-import sgMail from '@sendgrid/mail';
-import config from '../config';
+import sgMail from "@sendgrid/mail";
+import config from "../config";
+import path from "path";
+import fs from "fs";
 
-sgMail.setApiKey(config.sendGridApiKey || '');
+sgMail.setApiKey(config.sendGridApiKey || "");
+
+const logoPath = path.resolve(__dirname, "../assets/fynflo-logo.png");
+const logoContent = fs.readFileSync(logoPath).toString("base64");
 
 export async function sendEmailConfirmation(to: string, confirmUrl: string) {
   const html = `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.5;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <img src="/fynflo-logo.png" alt="Fynflo" width="100" style="display: block; margin: auto;" />
+      <img src="cid:<fynflo_logo>" alt="Fynflo" width="100" style="display: block; margin: auto;" />
     </div>
 
     <h2 style="color: #1E40AF; text-align: center;">Welcome to Fynflo!</h2>
@@ -61,20 +66,31 @@ The Fynflo Team
 support@fynflo.com
 `;
 
+  const attachments = [
+    {
+      filename: "fynflo-logo.png",
+      content: logoContent,
+      type: "image/png",
+      disposition: "inline",
+      content_id: "<fynflo_logo>", // this MUST match cid in HTML
+    },
+  ];
+
   const msg = {
     to,
-    from: { email: config?.senderEmail!, name: 'Fynflo Team' }, // Change to your verified sender
-    subject: 'Confirm your Fynflo account',
+    from: { email: config?.senderEmail!, name: "Fynflo Team" }, // Change to your verified sender
+    subject: "Confirm your Fynflo account",
     text,
     html,
+    attachments,
   };
 
   try {
     const response = await sgMail.send(msg);
-    console.log('Email sent:', response[0].statusCode);
+    console.log("Email sent:", response[0].statusCode);
     return response;
   } catch (error) {
-    console.error('SendGrid error:', error);
+    console.error("SendGrid error:", error);
     throw error;
   }
 }
@@ -84,7 +100,7 @@ export async function sendPasswordReset(to: string, resetUrl: string) {
   const html = `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; color: #333; line-height: 1.5;">
     <div style="text-align: center; margin-bottom: 30px;">
-      <img src="/fynflo-logo.png" alt="Fynflo" width="100" style="display: block; margin: auto;" />
+      <img src="cid:<fynflo_logo>" alt="Fynflo" width="100" style="display: block; margin: auto;" />
     </div>
 
     <h2 style="color: #1E40AF; text-align: center;">Reset Your Password</h2>
@@ -138,20 +154,31 @@ The Fynflo Team
 support@fynflo.com
 `;
 
+  const attachments = [
+    {
+      filename: "fynflo-logo.png",
+      content: logoContent,
+      type: "image/png",
+      disposition: "inline",
+      content_id: "<fynflo_logo>", // this MUST match cid in HTML
+    },
+  ];
+
   const msg = {
     to,
-    from: { email: config?.senderEmail!, name: 'Fynflo Team' }, // Change to your verified sender
-    subject: 'Reset your Fynflo password',
+    from: { email: config?.senderEmail!, name: "Fynflo Team" }, // Change to your verified sender
+    subject: "Reset your Fynflo password",
     text,
     html,
+    attachments,
   };
 
   try {
     const response = await sgMail.send(msg);
-    console.log('Email sent:', response[0].statusCode);
+    console.log("Email sent:", response[0].statusCode);
     return response;
   } catch (error) {
-    console.error('SendGrid error:', error);
+    console.error("SendGrid error:", error);
     throw error;
   }
 }
